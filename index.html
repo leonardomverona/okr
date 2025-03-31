@@ -309,6 +309,9 @@
             <button onclick="openModal('okr')">
               <i class="fas fa-plus"></i> Novo OKR
             </button>
+            <button onclick="openModal('kpi')">
+              <i class="fas fa-plus"></i> Novo KPI
+            </button>
           </div>
           <div id="okrList"></div>
         </div>
@@ -603,7 +606,7 @@
       }
       showModal(type, item, parentId);
     }
-
+    
     function showModal(type, item = null, parentId = null) {
       const modal = document.getElementById('modal');
       modal.style.display = 'flex';
