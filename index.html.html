@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão Avançada de OKRs/KPIs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #4361ee;
+      --secondary: #3f37c9;
+      --success: #06d6a0;
+      --warning: #ffd166;
+      --danger: #ef476f;
+      --highlight: #6C63FF;
+      --background: #f8f9fa;
+      --text: #2b2d42;
+      --card-bg: #ffffff;
+      --border: #e9ecef;
+      --dark-bg: #1a1b1e;
+      --dark-card: #2b2d42;
+      --dark-text: #edf2f4;
+      --border-radius: 0.75rem;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--background);
+      color: var(--text);
+      transition: all 0.3s ease;
+      overflow-x: hidden;
+    }
+
+    body.dark-mode {
+      --background: var(--dark-bg);
+      --text: var(--dark-text);
+      --card-bg: var(--dark-card);
+      --border: #3a3d4d;
+      --highlight: #4a44b2;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 100vh;
+      transition: all 0.3s ease;
+    }
+
+    .dashboard.collapsed {
+      grid-template-columns: 60px 1fr;
+    }
+
+    .sidebar {
+      background: var(--highlight);
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .toggle-btn {
+      background: transparent;
+      border: none;
+      color: #fff;
+      align-self: flex-end;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .sidebar.collapsed .logo span,
+    .sidebar.collapsed .nav-links a span {
+      display: none;
+    }
+
+    .sidebar.collapsed .nav-links a {
+      justify-content: center;
+    }
+
+    .mobile-toggle {
+      display: none;
+      background: var(--primary);
+      border: none;
+      color: #fff;
+      padding: 0.75rem;
+      border-radius: var(--border-radius);
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      z-index: 1100;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: -280px;
+        width: 280px;
+        height: 100%;
+        z-index: 1050;
+        overflow-y: auto;
+        transition: left 0.3s ease;
+      }
+      .sidebar.open {
+        left: 0;
+      }
+      .mobile-toggle {
+        display: inline-block;
+      }
+      .toggle-btn {
+        display: none;
+      }
+      .main-content {
+        margin-top: 60px;
+        padding: 1rem;
+      }
+      .metrics-cards {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      }
+      .card, .metrics-card {
+        padding: 1rem;
+      }
+      .roadmap-grid th, .roadmap-grid td {
+        padding: 3px;
+        font-size: 0.8rem;
+      }
+      .label-cell {
+        width: 100px;
+        padding-left: 5px;
+      }
+    }
+
+    .sidebar .logo {
+      font-size: 1.4rem;
+      color: #fff;
+      font-weight: 600;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .nav-links a {
+      color: #fff;
+      text-decoration: none;
+      padding: 0.75rem;
+      border-radius: var(--border-radius);
+      transition: background 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-links a:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .export-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: auto;
+    }
+
+    .export-buttons button {
+      background: var(--border);
+      color: var(--primary);
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 0.5rem;
+      font-size: 0.8rem;
+      transition: background 0.3s;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .export-buttons button:hover {
+      background: var(--secondary);
+      color: #fff;
+    }
+
+    .main-content {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      overflow-y: auto;
+    }
+
+    #dashboardSection, #roadmapSection, #configSection {
+      display: none;
+    }
+
+    #dashboardSection.active,
+    #roadmapSection.active,
+    #configSection.active {
+      display: block;
+    }
+
+    .metrics-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 2rem;
+    }
+
+    .metrics-card, .card {
+      background: var(--card-bg);
+      padding: 1.5rem;
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      border: 1px solid var(--border);
+      margin-bottom: 30px;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+    }
+
+    .progress-bar {
+      height: 14px;
+      background: var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 1rem;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 8px;
+      transition: width 0.4s ease;
+      background: linear-gradient(90deg, var(--secondary), var(--success));
+    }
+
+    .progress-text {
+      position: absolute;
+      right: 5px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8rem;
+      color: #fff;
+    }
+
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+      margin: 5px 0;
+    }
+
+    button:hover {
+      background: var(--secondary);
+      transform: translateY(-2px);
+    }
+
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(4px);
+      z-index: 1100;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      padding: 2rem;
+      border-radius: var(--border-radius);
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 2px solid var(--border);
+      border-radius: var(--border-radius);
+      background: var(--card-bg);
+      color: var(--text);
+    }
+
+    .roadmap-controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .roadmap-controls label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .roadmap-grid {
+      overflow-x: auto;
+    }
+
+    .roadmap-grid table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .roadmap-grid th, .roadmap-grid td {
+      border: 1px solid var(--border);
+      padding: 5px;
+      text-align: center;
+      vertical-align: middle;
+      font-size: 0.9rem;
+    }
+
+    .label-cell {
+      width: 150px;
+      text-align: left;
+      padding-left: 10px;
+      background: var(--card-bg);
+    }
+
+    .timeline-cell {
+      position: relative;
+      height: 40px;
+    }
+
+    .timeline-bar {
+      position: absolute;
+      height: 20px;
+      background: var(--primary);
+      border-radius: 4px;
+      top: 10px;
+    }
+
+    .okr-row .timeline-bar {
+      background: var(--secondary);
+    }
+
+    .kpi-row .timeline-bar {
+      background: var(--warning);
+    }
+  </style>
+</head>
+<body>
+  <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+  <div class="dashboard" id="dashboard">
+    <div class="sidebar" id="sidebar">
+      <button class="toggle-btn" onclick="toggleSidebarDesktop()"><i class="fas fa-bars"></i></button>
+      <div class="logo">
+        <i class="fas fa-rocket"></i> <span>Gestão OKR</span>
+      </div>
+      <nav class="nav-links">
+        <a href="#" onclick="changeSection('dashboardSection')">
+          <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
+        </a>
+        <a href="#" onclick="changeSection('roadmapSection')">
+          <i class="fas fa-road"></i> <span>Roadmap</span>
+        </a>
+        <a href="#" onclick="changeSection('configSection')">
+          <i class="fas fa-cog"></i> <span>Configurações</span>
+        </a>
+      </nav>
+      <div class="export-buttons">
+        <button onclick="exportJSON()">
+          <i class="fas fa-file-export"></i> <span>JSON</span>
+        </button>
+        <button onclick="exportCSV()">
+          <i class="fas fa-file-csv"></i> <span>CSV</span>
+        </button>
+        <button onclick="exportPDF()">
+          <i class="fas fa-file-pdf"></i> <span>PDF</span>
+        </button>
+        <input type="file" id="importFile" accept=".json,.csv" style="display:none;" onchange="importData(event)">
+        <button onclick="document.getElementById('importFile').click()">
+          <i class="fas fa-file-import"></i> <span>Importar</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div id="dashboardSection" class="active">
+        <h1>Bem-vindo ao painel estratégico OKR</h1>
+        <div class="metrics-cards">
+          <div class="metrics-card">
+            <h4><i class="fas fa-bullseye"></i> OKRs Ativos</h4>
+            <p id="okrsAtivosCount">0</p>
+          </div>
+          <div class="metrics-card">
+            <h4><i class="fas fa-check-circle"></i> Concluídos</h4>
+            <p id="okrsConcluidosCount">0</p>
+          </div>
+          <div class="metrics-card">
+            <h4><i class="fas fa-chart-line"></i> KPIs Ativos</h4>
+            <p id="kpisAtivosCount">0</p>
+          </div>
+          <div class="metrics-card">
+            <h4><i class="fas fa-tasks"></i> Progresso Médio</h4>
+            <p id="progressoMedio">0%</p>
+          </div>
+        </div>
+        <div class="card">
+          <h3><i class="fas fa-chart-bar"></i> Progresso Global</h3>
+          <div class="progress-bar">
+            <div class="progress-fill" id="globalProgress" style="width: 0%;"></div>
+            <span class="progress-text" id="globalProgressText">0%</span>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3><i class="fas fa-bullseye"></i> Objetivos Ativos</h3>
+            <button onclick="openModal('okr')">
+              <i class="fas fa-plus"></i> Novo OKR
+            </button>
+          </div>
+          <div id="okrList"></div>
+        </div>
+      </div>
+
+      <div id="roadmapSection">
+        <div class="card">
+          <h3><i class="fas fa-road"></i> Roadmap Estratégico</h3>
+          <div class="roadmap-controls">
+            <label>Data Início:
+              <input type="date" id="roadmapStart" onchange="updateRoadmapGrid()">
+            </label>
+            <label>Data Fim:
+              <input type="date" id="roadmapEnd" onchange="updateRoadmapGrid()">
+            </label>
+            <button onclick="updateRoadmapGrid()">Atualizar Roadmap</button>
+          </div>
+          <div class="roadmap-grid" id="roadmapGrid"></div>
+        </div>
+      </div>
+
+      <div id="configSection">
+        <div class="card">
+          <h3><i class="fas fa-cog"></i> Configurações</h3>
+          <button onclick="toggleTheme()">
+            <i class="fas fa-moon"></i> Alternar Tema
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h3 id="modalTitle"></h3>
+      <form id="form" onsubmit="handleFormSubmit(event)">
+        <div id="formContent"></div>
+        <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+          <button type="button" onclick="closeModal()">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
+          <button type="submit">
+            <i class="fas fa-save"></i> Salvar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    function computeStatusAndSuggestion(item) {
+      const now = new Date();
+      const start = new Date(item.startDate);
+      const end = new Date(item.endDate);
+      let progress = (item.progress !== undefined && !isNaN(item.progress))
+                     ? parseFloat(item.progress)
+                     : (item.current !== undefined && item.target !== undefined && item.target != 0
+                        ? (parseFloat(item.current) / parseFloat(item.target)) * 100
+                        : 0);
+      let status, suggestion, color;
+      if (now < start) {
+        status = "Não iniciado";
+        suggestion = "O período ainda não começou. Prepare suas metas.";
+        color = "#6c757d";
+      } else if (now > end) {
+        if (progress >= 100) {
+          status = "Concluído";
+          suggestion = "Meta atingida dentro do prazo.";
+          color = "var(--success)";
+        } else {
+          status = "Atrasado";
+          suggestion = "O prazo já expirou e a meta não foi alcançada. Revise sua estratégia.";
+          color = "var(--danger)";
+        }
+      } else {
+        const timeElapsedPercent = ((now - start) / (end - start)) * 100;
+        const diff = timeElapsedPercent - progress;
+        if (diff > 10) {
+          status = "Atrasado";
+          suggestion = "Você está abaixo do progresso esperado para o período. Aumente os esforços!";
+          color = "var(--danger)";
+        } else if (diff < -10) {
+          status = "Adiantado";
+          suggestion = "Ótimo desempenho! Você está adiantado em relação ao cronograma.";
+          color = "var(--success)";
+        } else {
+          status = "Em Progresso";
+          suggestion = "Está no caminho certo, continue assim.";
+          color = "var(--warning)";
+        }
+      }
+      return { status, suggestion, color, progress };
+    }
+
+    function toggleSidebarDesktop() {
+      var sidebar = document.getElementById('sidebar');
+      var dashboard = document.getElementById('dashboard');
+      sidebar.classList.toggle('collapsed');
+      dashboard.classList.toggle('collapsed');
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+    }
+
+    function computeWeightedValues() {
+      const grade = parseFloat(document.getElementById('okrGrade').value) || 0;
+      const weight = parseFloat(document.getElementById('okrWeight').value) || 1;
+      document.getElementById('okrGradeWeighted').value = (grade * weight).toFixed(1);
+    }
+
+    function getMonthLabels(start, end) {
+      const labels = [];
+      const current = new Date(start);
+      current.setDate(1);
+      while (current <= end) {
+        const month = current.toLocaleString('pt-BR', { month: 'short' });
+        const year = current.getFullYear();
+        labels.push(`${month} ${year}`);
+        current.setMonth(current.getMonth() + 1);
+      }
+      return labels;
+    }
+
+    function calculateBarPosition(itemStart, itemEnd, periodStart, periodEnd) {
+      const ps = periodStart.getTime();
+      const pe = periodEnd.getTime();
+      let s = new Date(itemStart).getTime();
+      let e = new Date(itemEnd).getTime();
+      if (e < ps || s > pe) return null;
+      s = Math.max(s, ps);
+      e = Math.min(e, pe);
+      const total = pe - ps;
+      const left = ((s - ps) / total) * 100;
+      const width = ((e - s) / total) * 100;
+      return { left, width };
+    }
+
+    function updateRoadmapGrid() {
+      const startVal = document.getElementById('roadmapStart').value;
+      const endVal = document.getElementById('roadmapEnd').value;
+      if (!startVal || !endVal) return;
+      const periodStart = new Date(startVal);
+      const periodEnd = new Date(endVal);
+      renderRoadmapGrid(periodStart, periodEnd);
+    }
+
+    function renderRoadmapGrid(periodStart, periodEnd) {
+      let html = '<table><thead><tr><th class="label-cell">OKR / KPI</th>';
+      const monthLabels = getMonthLabels(periodStart, periodEnd);
+      monthLabels.forEach(label => {
+        html += `<th>${label}</th>`;
+      });
+      html += '</tr></thead><tbody>';
+      okrSystem.okrs.forEach(okr => {
+        const okrPos = calculateBarPosition(okr.startDate, okr.endDate, periodStart, periodEnd);
+        html += '<tr class="okr-row">';
+        html += `<td class="label-cell">${okr.title}</td>`;
+        html += `<td class="timeline-cell" colspan="${monthLabels.length}">`;
+        if (okrPos) {
+          html += `<div class="timeline-bar" style="left: ${okrPos.left}%; width: ${okrPos.width}%"></div>`;
+        }
+        html += '</td></tr>';
+        const kpis = okrSystem.kpis.filter(k => k.okrId === okr.id);
+        kpis.forEach(kpi => {
+          const kpiPos = calculateBarPosition(kpi.startDate, kpi.endDate, periodStart, periodEnd);
+          html += '<tr class="kpi-row">';
+          html += `<td class="label-cell" style="padding-left:20px;">${kpi.name}</td>`;
+          html += `<td class="timeline-cell" colspan="${monthLabels.length}">`;
+          if (kpiPos) {
+            html += `<div class="timeline-bar" style="left: ${kpiPos.left}%; width: ${kpiPos.width}%"></div>`;
+          }
+          html += '</td></tr>';
+        });
+      });
+      html += '</tbody></table>';
+      document.getElementById('roadmapGrid').innerHTML = html;
+    }
+
+    class OKRSystem {
+      constructor() {
+        this.okrs = [];
+        this.kpis = [];
+        this.loadData();
+        this.autoSave();
+        this.render();
+      }
+
+      loadData() {
+        const data = localStorage.getItem('okrData');
+        if (data) {
+          try {
+            const parsed = JSON.parse(data);
+            this.okrs = parsed.okrs || [];
+            this.kpis = parsed.kpis || [];
+          } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+          }
+        }
+      }
+
+      saveData() {
+        localStorage.setItem('okrData', JSON.stringify({
+          okrs: this.okrs,
+          kpis: this.kpis
+        }));
+      }
+
+      autoSave() {
+        window.addEventListener('beforeunload', () => this.saveData());
+      }
+
+      addOKR(title, target, startDate, endDate, grade, weight) {
+        const gradeWeighted = (parseFloat(grade) * parseFloat(weight)).toFixed(1);
+        const newOKR = {
+          id: Date.now().toString(),
+          title,
+          target,
+          startDate,
+          endDate,
+          grade: parseFloat(grade),
+          weight: parseFloat(weight),
+          gradeWeighted,
+          progress: 0
+        };
+        this.okrs.push(newOKR);
+        this.saveData();
+        this.render();
+      }
+
+      editOKR(id, newData) {
+        const index = this.okrs.findIndex(o => o.id === id);
+        if (index > -1) {
+          const gradeWeighted = (parseFloat(newData.grade) * parseFloat(newData.weight)).toFixed(1);
+          this.okrs[index] = { 
+            ...this.okrs[index], 
+            title: newData.title,
+            target: newData.target,
+            startDate: newData.startDate,
+            endDate: newData.endDate,
+            grade: parseFloat(newData.grade),
+            weight: parseFloat(newData.weight),
+            gradeWeighted
+          };
+          this.calculateProgress();
+          this.saveData();
+          this.render();
+        }
+      }
+
+      deleteOKR(id) {
+        this.okrs = this.okrs.filter(o => o.id !== id);
+        this.kpis = this.kpis.filter(k => k.okrId !== id);
+        this.saveData();
+        this.render();
+      }
+
+      addKPI(name, okrId, startDate, endDate, current, target, weight) {
+        if (new Date(startDate) > new Date(endDate)) {
+          alert('A data inicial do KPI deve ser anterior à data final.');
+          return;
+        }
+        const newKPI = {
+          id: Date.now().toString(),
+          name,
+          okrId,
+          startDate,
+          endDate,
+          current: parseFloat(current),
+          target: parseFloat(target),
+          weight: parseFloat(weight) || 1
+        };
+        this.kpis.push(newKPI);
+        this.calculateProgress();
+        this.saveData();
+        this.render();
+      }
+
+      editKPI(id, newData) {
+        const index = this.kpis.findIndex(k => k.id === id);
+        if (index > -1) {
+          this.kpis[index] = {
+            ...this.kpis[index],
+            name: newData.name,
+            okrId: newData.okrId,
+            startDate: newData.startDate,
+            endDate: newData.endDate,
+            current: parseFloat(newData.current),
+            target: parseFloat(newData.target),
+            weight: parseFloat(newData.weight)
+          };
+          this.calculateProgress();
+          this.saveData();
+          this.render();
+        }
+      }
+
+      deleteKPI(id) {
+        this.kpis = this.kpis.filter(k => k.id !== id);
+        this.calculateProgress();
+        this.saveData();
+        this.render();
+      }
+
+      calculateProgress() {
+        this.okrs.forEach(okr => {
+          const relatedKPIs = this.kpis.filter(k => k.okrId === okr.id);
+          if (relatedKPIs.length > 0) {
+            const totalWeighted = relatedKPIs.reduce((sum, k) => sum + ((k.current / k.target) * 100 * k.weight), 0);
+            const totalWeight = relatedKPIs.reduce((sum, k) => sum + k.weight, 0);
+            okr.progress = totalWeight > 0 ? (totalWeighted / totalWeight).toFixed(1) : 0;
+          } else {
+            okr.progress = 0;
+          }
+        });
+        this.updateMetrics();
+      }
+
+      updateMetrics() {
+        const activeOKRs = this.okrs.filter(o => parseFloat(o.progress) < 100).length;
+        const completedOKRs = this.okrs.filter(o => parseFloat(o.progress) >= 100).length;
+        const totalKPIs = this.kpis.length;
+        const avgProgress = this.okrs.length > 0 
+          ? this.okrs.reduce((sum, o) => sum + parseFloat(o.progress), 0) / this.okrs.length
+          : 0;
+        document.getElementById('okrsAtivosCount').textContent = activeOKRs;
+        document.getElementById('okrsConcluidosCount').textContent = completedOKRs;
+        document.getElementById('kpisAtivosCount').textContent = totalKPIs;
+        document.getElementById('progressoMedio').textContent = `${avgProgress.toFixed(1)}%`;
+        document.getElementById('globalProgress').style.width = `${avgProgress}%`;
+        document.getElementById('globalProgressText').textContent = `${avgProgress.toFixed(1)}%`;
+      }
+
+      renderOKRs() {
+        const container = document.getElementById('okrList');
+        if (!container) return;
+        if (this.okrs.length === 0) {
+          container.innerHTML = '<p>Nenhum OKR cadastrado.</p>';
+          return;
+        }
+        container.innerHTML = this.okrs.map(okr => {
+          const statusObj = computeStatusAndSuggestion(okr);
+          return `
+          <div class="card" style="border: 1px solid ${statusObj.color}; padding: 1rem; margin-bottom: 1rem;">
+            <h4>${okr.title}</h4>
+            <p><strong>Meta:</strong> ${okr.target}</p>
+            <p><strong>Data Inicial:</strong> ${okr.startDate}</p>
+            <p><strong>Data Final:</strong> ${okr.endDate}</p>
+            <p><strong>Grade:</strong> ${okr.grade} | <strong>Peso:</strong> ${okr.weight}</p>
+            <p><strong>Grade * Wgt:</strong> ${okr.gradeWeighted}</p>
+            <p><strong>Status:</strong> ${statusObj.status}</p>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: ${okr.progress}%; background: ${statusObj.color};"></div>
+              <span class="progress-text">${okr.progress}%</span>
+            </div>
+            <p style="font-size:0.85rem; color: #555; margin-top:0.5rem;"><em>Sugestão:</em> ${statusObj.suggestion}</p>
+            <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+              <button onclick="openModal('okr', '${okr.id}')">Editar</button>
+              <button onclick="okrSystem.deleteOKR('${okr.id}')">Excluir</button>
+              <button onclick="openModal('kpi', null, '${okr.id}')">+ Adicionar KPI</button>
+            </div>
+            ${this.renderAssociatedKPIs(okr.id)}
+          </div>`;
+        }).join('');
+      }
+
+      renderAssociatedKPIs(okrId) {
+        const associated = this.kpis.filter(k => k.okrId === okrId);
+        if (associated.length === 0) return '';
+        return `<div style="margin: 0.5rem 0 0 1rem; border-left: 2px dashed var(--border); padding-left: 1rem;">
+          ${associated.map(kpi => {
+            const statusObj = computeStatusAndSuggestion(kpi);
+            const kpiProgress = kpi.target > 0 ? ((kpi.current / kpi.target) * 100).toFixed(1) : 0;
+            return `
+              <div style="font-size: 0.9rem; margin-bottom: 1rem; border-left: 4px solid ${statusObj.color}; padding: 0.5rem;">
+                <strong>${kpi.name}</strong>
+                <p><small>De: ${kpi.startDate} até ${kpi.endDate}</small></p>
+                <p>Atual: ${kpi.current} / Alvo: ${kpi.target} (Peso: ${kpi.weight})</p>
+                <div class="progress-bar" style="height: 8px;">
+                  <div class="progress-fill" style="width: ${kpiProgress}%; background: ${statusObj.color};"></div>
+                </div>
+                <p style="font-size:0.8rem; color: #555; margin-top:0.25rem;"><em>Sugestão:</em> ${statusObj.suggestion}</p>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                  <button onclick="openModal('kpi', '${kpi.id}')">Editar</button>
+                  <button onclick="okrSystem.deleteKPI('${kpi.id}')">Excluir</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>`;
+      }
+
+      renderRoadmap() {
+        updateRoadmapGrid();
+      }
+
+      render() {
+        this.renderOKRs();
+        this.renderRoadmap();
+        this.updateMetrics();
+      }
+    }
+
+    const okrSystem = new OKRSystem();
+
+    function changeSection(sectionId) {
+      ['dashboardSection', 'roadmapSection', 'configSection'].forEach(sec => {
+        document.getElementById(sec).classList.remove('active');
+      });
+      document.getElementById(sectionId).classList.add('active');
+      if (sectionId === 'roadmapSection') okrSystem.renderRoadmap();
+      if (window.innerWidth <= 768) {
+        document.getElementById('sidebar').classList.remove('open');
+      }
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+      localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+    }
+
+    function openModal(type, id = null, parentId = null) {
+      const modal = document.getElementById('modal');
+      modal.style.display = 'flex';
+      const formContent = document.getElementById('formContent');
+      const modalTitle = document.getElementById('modalTitle');
+      const formElem = document.getElementById('form');
+      if (id !== null && id !== undefined) {
+        formElem.dataset.editId = id;
+      } else {
+        delete formElem.dataset.editId;
+      }
+      formElem.dataset.modalType = type;
+      if (type === 'okr') {
+        modalTitle.textContent = id ? 'Editar OKR' : 'Novo OKR';
+        const okr = id ? okrSystem.okrs.find(o => o.id === id) : null;
+        formContent.innerHTML = `
+          <div class="form-group">
+            <label>Título do OKR</label>
+            <input type="text" id="okrTitle" value="${okr ? okr.title : ''}" required>
+          </div>
+          <div class="form-group">
+            <label>Meta</label>
+            <input type="text" id="okrTarget" value="${okr ? okr.target : ''}" required>
+          </div>
+          <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label>Data Inicial</label>
+              <input type="date" id="okrStartDate" value="${okr ? okr.startDate : ''}" required>
+            </div>
+            <div>
+              <label>Data Final</label>
+              <input type="date" id="okrEndDate" value="${okr ? okr.endDate : ''}" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Grade</label>
+            <input type="number" id="okrGrade" min="0" max="100" value="${okr ? okr.grade : ''}" required>
+          </div>
+          <div class="form-group">
+            <label>Peso</label>
+            <input type="number" id="okrWeight" min="0" step="0.1" value="${okr ? okr.weight : '1'}" required>
+          </div>
+          <div class="form-group">
+            <label>Grade * Wgt</label>
+            <input type="number" id="okrGradeWeighted" readonly value="${okr ? okr.gradeWeighted : '0'}">
+          </div>`;
+      } else if (type === 'kpi') {
+        modalTitle.textContent = id ? 'Editar KPI' : 'Novo KPI';
+        const kpi = id ? okrSystem.kpis.find(k => k.id === id) : null;
+        const okrSelector = okrSystem.okrs.map(o => 
+          `<option value="${o.id}" ${parentId === o.id ? 'selected' : ''}>${o.title}</option>`
+        ).join('');
+        formContent.innerHTML = `
+          <div class="form-group">
+            <label>Nome do KPI</label>
+            <input type="text" id="kpiName" value="${kpi ? kpi.name : ''}" required>
+          </div>
+          <div class="form-group">
+            <label>OKR Associado</label>
+            <select id="kpiOkrId" required>
+              ${okrSelector}
+            </select>
+          </div>
+          <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label>Data Inicial</label>
+              <input type="date" id="kpiStartDate" value="${kpi ? kpi.startDate : ''}" required>
+            </div>
+            <div>
+              <label>Data Final</label>
+              <input type="date" id="kpiEndDate" value="${kpi ? kpi.endDate : ''}" required>
+            </div>
+          </div>
+          <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+              <label>Valor Atual</label>
+              <input type="number" id="kpiCurrent" step="0.01" value="${kpi ? kpi.current : '0'}" required>
+            </div>
+            <div>
+              <label>Valor Alvo</label>
+              <input type="number" id="kpiTarget" step="0.01" value="${kpi ? kpi.target : '1'}" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Peso</label>
+            <input type="number" id="kpiWeight" step="0.1" value="${kpi ? kpi.weight : '1'}" required>
+          </div>`;
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+      document.getElementById('form').reset();
+      delete document.getElementById('form').dataset.editId;
+    }
+
+    function handleFormSubmit(event) {
+      event.preventDefault();
+      const form = document.getElementById('form');
+      const type = form.dataset.modalType;
+      const isEdit = !!form.dataset.editId;
+
+      if (type === 'okr') {
+        const okrData = {
+          title: document.getElementById('okrTitle').value,
+          target: document.getElementById('okrTarget').value,
+          startDate: document.getElementById('okrStartDate').value,
+          endDate: document.getElementById('okrEndDate').value,
+          grade: document.getElementById('okrGrade').value,
+          weight: document.getElementById('okrWeight').value
+        };
+        if (isEdit) {
+          okrSystem.editOKR(form.dataset.editId, okrData);
+        } else {
+          okrSystem.addOKR(
+            okrData.title,
+            okrData.target,
+            okrData.startDate,
+            okrData.endDate,
+            okrData.grade,
+            okrData.weight
+          );
+        }
+      } else if (type === 'kpi') {
+        const kpiData = {
+          name: document.getElementById('kpiName').value,
+          okrId: document.getElementById('kpiOkrId').value,
+          startDate: document.getElementById('kpiStartDate').value,
+          endDate: document.getElementById('kpiEndDate').value,
+          current: document.getElementById('kpiCurrent').value,
+          target: document.getElementById('kpiTarget').value,
+          weight: document.getElementById('kpiWeight').value
+        };
+        if (isEdit) {
+          okrSystem.editKPI(form.dataset.editId, kpiData);
+        } else {
+          okrSystem.addKPI(
+            kpiData.name,
+            kpiData.okrId,
+            kpiData.startDate,
+            kpiData.endDate,
+            kpiData.current,
+            kpiData.target,
+            kpiData.weight
+          );
+        }
+      }
+      closeModal();
+    }
+
+    function exportJSON() {
+      const data = {
+        okrs: okrSystem.okrs,
+        kpis: okrSystem.kpis
+      };
+      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `okr-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+    }
+
+    function exportCSV() {
+      let csvContent = "Tipo,ID,Título,Início,Fim,Progresso,Alvo,Atual,Peso\n";
+      
+      okrSystem.okrs.forEach(okr => {
+        csvContent += `OKR,${okr.id},"${okr.title}",${okr.startDate},${okr.endDate},${okr.progress},${okr.target},,${okr.weight}\n`;
+      });
+      
+      okrSystem.kpis.forEach(kpi => {
+        csvContent += `KPI,${kpi.id},"${kpi.name}",${kpi.startDate},${kpi.endDate},${((kpi.current/kpi.target)*100).toFixed(1)},${kpi.target},${kpi.current},${kpi.weight}\n`;
+      });
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `okr-export-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+    }
+
+    function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      let yPos = 20;
+      
+      doc.setFontSize(18);
+      doc.text("Relatório OKR/KPI", 10, 15);
+      
+      doc.setFontSize(12);
+      okrSystem.okrs.forEach((okr, index) => {
+        if (yPos > 280) {
+          doc.addPage();
+          yPos = 20;
+        }
+        doc.text(`OKR: ${okr.title} (${okr.progress}%)`, 10, yPos);
+        yPos += 10;
+        doc.text(`Período: ${okr.startDate} - ${okr.endDate}`, 10, yPos);
+        yPos += 10;
+        
+        okrSystem.kpis.filter(k => k.okrId === okr.id).forEach(kpi => {
+          doc.text(`- KPI: ${kpi.name} (${((kpi.current/kpi.target)*100).toFixed(1)}%)`, 15, yPos);
+          yPos += 7;
+        });
+        yPos += 10;
+      });
+      
+      doc.save(`okr-export-${new Date().toISOString().split('T')[0]}.pdf`);
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const data = JSON.parse(e.target.result);
+          okrSystem.okrs = data.okrs || [];
+          okrSystem.kpis = data.kpis || [];
+          okrSystem.saveData();
+          okrSystem.render();
+          alert('Dados importados com sucesso!');
+        } catch (error) {
+          alert('Erro ao importar dados. Verifique o formato do arquivo.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') document.body.classList.add('dark-mode');
+    
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('roadmapStart').value = today;
+    document.getElementById('roadmapEnd').value = new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString().split('T')[0];
+    
+    document.addEventListener('input', e => {
+      if (e.target.id === 'okrGrade' || e.target.id === 'okrWeight') {
+        computeWeightedValues();
+      }
+    });
+  </script>
+</body>
+</html>
